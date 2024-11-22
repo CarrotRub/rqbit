@@ -31,7 +31,7 @@ impl Drop for MmapBitV {
 }
 
 impl MmapBitV {
-    pub fn new(file: File) -> anyhow::Result<Self> {
+    pub fn new(file: tokio::fs::File) -> anyhow::Result<Self> {
         let mmap =
             unsafe { memmap2::MmapOptions::new().map_mut(&file) }.context("error mmapping file")?;
         Ok(Self { mmap })
