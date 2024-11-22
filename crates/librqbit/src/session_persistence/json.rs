@@ -223,6 +223,9 @@ impl BitVFactory for JsonSessionPersistenceStore {
             .await
             .context("error writing bitslice to {filename:?}")?;
         //Here error
+        dst.flush()
+            .await
+            .context("error flushing dst before dropping")?;
         drop(dst);
         tokio::fs::rename(&tmp_filename, &filename)
             .await
