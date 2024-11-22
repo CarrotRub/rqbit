@@ -21,7 +21,6 @@ pub trait BitV: Send + Sync {
 pub type BoxBitV = Box<dyn BitV>;
 
 pub struct MmapBitV {
-    _file: File,
     mmap: memmap2::MmapMut,
 }
 
@@ -35,7 +34,7 @@ impl MmapBitV {
     pub fn new(file: File) -> anyhow::Result<Self> {
         let mmap =
             unsafe { memmap2::MmapOptions::new().map_mut(&file) }.context("error mmapping file")?;
-        Ok(Self { mmap, _file: file })
+        Ok(Self { mmap })
     }
 }
 
