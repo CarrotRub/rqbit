@@ -222,6 +222,8 @@ impl BitVFactory for JsonSessionPersistenceStore {
         tokio::io::copy(&mut b.as_raw_slice(), &mut dst)
             .await
             .context("error writing bitslice to {filename:?}")?;
+        //Here error
+        drop(dst);
         tokio::fs::rename(&tmp_filename, &filename)
             .await
             .with_context(|| format!("error renaming {tmp_filename:?} to {filename:?}"))?;
