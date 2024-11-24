@@ -193,7 +193,10 @@ impl BitVFactory for JsonSessionPersistenceStore {
                 _ => return Err(e).with_context(|| format!("error opening {filename:?}")),
             },
         };
-        Ok(Some(MmapBitV::new(f)?.into_dyn()))
+        let mmap_bitv = MmapBitV::new(f)?;
+
+        //`mmap_bitv` will be dropped when the Box is dropped
+        Ok(Some(Box::new(mmap_bitv)))
     }
 
     async fn clear(&self, id: TorrentIdOrHash) -> anyhow::Result<()> {
