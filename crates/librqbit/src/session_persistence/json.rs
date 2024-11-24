@@ -218,14 +218,28 @@ impl BitVFactory for JsonSessionPersistenceStore {
             .truncate(true)
             .open(&tmp_filename)
             .await
-            .with_context(|| format!("error opening {filename:?}"))?;
+            .with_context(|| format!("error opening {tmp_filename:?}"))?;
         tokio::io::copy(&mut b.as_raw_slice(), &mut dst)
             .await
-            .context("error writing bitslice to {filename:?}")?;
-        //Here error
+            .context("error writing bitslice to temporary file")?;
+        dst.flush().await.context("error flushing temporary file")?;
         drop(dst);
+        // target file is not in use
+        if tokio::fs::metadata(&filename).await.is_ok() {
+            tokio::fs::remove_file(&filename)
+                .await
+                .with_context(|| format!("error removing existing {filename:?}"))?;
+        }
         tokio::fs::rename(&tmp_filename, &filename)
             .await
+            .or_else(|_| {
+                // Fallback: Copy and remove if renaming fails
+                std::fs::copy(&tmp_filename, &filename)
+                    .with_context(|| format!("error copying {tmp_filename:?} to {filename:?}"))?;
+                std::fs::remove_file(&tmp_filename)
+                    .with_context(|| format!("error removing temporary file {tmp_filename:?}"))?;
+                Ok::<(), anyhow::Error>(())
+            })
             .with_context(|| format!("error renaming {tmp_filename:?} to {filename:?}"))?;
         let f = std::fs::OpenOptions::new()
             .read(true)
@@ -233,6 +247,7 @@ impl BitVFactory for JsonSessionPersistenceStore {
             .open(&filename)
             .with_context(|| format!("error opening {filename:?}"))?;
         trace!(?filename, "stored initial check bitfield");
+
         Ok(MmapBitV::new(f)
             .with_context(|| format!("error constructing MmapBitV from file {filename:?}"))?
             .into_dyn())
