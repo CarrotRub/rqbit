@@ -26,16 +26,12 @@ pub struct MmapBitV {
 
 impl Drop for MmapBitV {
     fn drop(&mut self) {
-        trace!("Just in case, I am dropping this manually");
-        unsafe {
-            std::ptr::drop_in_place(self.mmap.as_mut_ptr());
-        }
         trace!("dropping MmapBitV, this should unmap the .bitv file")
     }
 }
 
 impl MmapBitV {
-    pub fn new(file: tokio::fs::File) -> anyhow::Result<Self> {
+    pub fn new(file: File) -> anyhow::Result<Self> {
         let mmap =
             unsafe { memmap2::MmapOptions::new().map_mut(&file) }.context("error mmapping file")?;
         Ok(Self { mmap })

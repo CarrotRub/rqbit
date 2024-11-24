@@ -182,11 +182,10 @@ impl BitVFactory for JsonSessionPersistenceStore {
     async fn load(&self, id: TorrentIdOrHash) -> anyhow::Result<Option<Box<dyn BitV>>> {
         let h = self.to_hash(id).await?;
         let filename = self.bitv_filename(&h);
-        let f = match tokio::fs::OpenOptions::new()
+        let f = match std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .open(&filename)
-            .await
         {
             Ok(f) => f,
             Err(e) => match e.kind() {
@@ -224,26 +223,14 @@ impl BitVFactory for JsonSessionPersistenceStore {
             .await
             .context("error writing bitslice to {filename:?}")?;
         //Here error
-        dst.flush()
-            .await
-            .context("error flushing dst before dropping")?;
         drop(dst);
-        let content = tokio::fs::read(&tmp_filename)
+        tokio::fs::rename(&tmp_filename, &filename)
             .await
-            .with_context(|| format!("error reading {tmp_filename:?}"))?;
-
-        tokio::fs::write(&filename, &content)
-            .await
-            .with_context(|| format!("error writing to {filename:?}"))?;
-
-        tokio::fs::remove_file(&tmp_filename)
-            .await
-            .with_context(|| format!("error deleting {tmp_filename:?}"))?;
-        let f = tokio::fs::OpenOptions::new()
+            .with_context(|| format!("error renaming {tmp_filename:?} to {filename:?}"))?;
+        let f = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .open(&filename)
-            .await
             .with_context(|| format!("error opening {filename:?}"))?;
         trace!(?filename, "stored initial check bitfield");
         Ok(MmapBitV::new(f)
