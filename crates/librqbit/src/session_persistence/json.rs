@@ -228,9 +228,17 @@ impl BitVFactory for JsonSessionPersistenceStore {
             .await
             .context("error flushing dst before dropping")?;
         drop(dst);
-        tokio::fs::rename(&tmp_filename, &filename)
+        let content = tokio::fs::read(&tmp_filename)
             .await
-            .with_context(|| format!("error renaming {tmp_filename:?} to {filename:?}"))?;
+            .with_context(|| format!("error reading {tmp_filename:?}"))?;
+
+        tokio::fs::write(&filename, &content)
+            .await
+            .with_context(|| format!("error writing to {filename:?}"))?;
+
+        tokio::fs::remove_file(&tmp_filename)
+            .await
+            .with_context(|| format!("error deleting {tmp_filename:?}"))?;
         let f = tokio::fs::OpenOptions::new()
             .read(true)
             .write(true)
