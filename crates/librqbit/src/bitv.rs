@@ -26,6 +26,10 @@ pub struct MmapBitV {
 
 impl Drop for MmapBitV {
     fn drop(&mut self) {
+        trace!("Just in case, I am dropping this manually");
+        unsafe {
+            std::ptr::drop_in_place(self.mmap.as_mut_ptr());
+        }
         trace!("dropping MmapBitV, this should unmap the .bitv file")
     }
 }
